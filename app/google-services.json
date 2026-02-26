@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "424498395256",
+    "project_id": "smartpds-c00c5",
+    "storage_bucket": "smartpds-c00c5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:424498395256:android:94fd482c61214b1567558d",
+        "android_client_info": {
+          "package_name": "com.example.nextgen_pds_kiosk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtqmKkYQ5mGwjWATbEqbgx8kXDDvQ-pmI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
