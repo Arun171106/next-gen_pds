@@ -69,9 +69,10 @@ class CameraAnalyzer(
             if (leftEye != null && rightEye != null) {
                 val deltaY = rightEye.y - leftEye.y
                 val deltaX = rightEye.x - leftEye.x
-                // Note: Image space has Y pointing down, so angle calculations might be inverted depending on camera orientation.
+                // Image space has Y pointing down. atan2 gives math geometry angle.
+                // We invert it so the Matrix postRotate (which rotates clockwise) levels the eyes.
                 val angleRads = atan2(deltaY.toDouble(), deltaX.toDouble())
-                angleDegrees = Math.toDegrees(angleRads).toFloat()
+                angleDegrees = -Math.toDegrees(angleRads).toFloat()
             }
 
             // 2. Setup Rotation Matrix centered on the Face Bounding Box
@@ -79,20 +80,17 @@ class CameraAnalyzer(
             matrix.postRotate(angleDegrees, bounds.exactCenterX(), bounds.exactCenterY())
 
             // 3. Create a fully rotated version of the main bitmap 
-            // (In a highly optimized environment, we would only extract the crop area, but this is accurate enough)
             val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 
-            // Since the whole image rotated around the face center, the face center hasn't moved relative to the canvas,
-            // but the bounds width/height might need expansion. For FaceNet, a tight square crop is usually best.
-            // We'll pad the bounding box slightly (like DeepFace does) to include the full chin and forehead.
-            val padding = (bounds.width() * 0.15f).toInt()
+            // 4. Extract Crop with DeepFace ratio padding
+            // We pad the bounding box slightly (15%) to include the full chin and forehead, clamping to avoid crashes
+            val paddingX = (bounds.width() * 0.15f).toInt()
+            val paddingY = (bounds.height() * 0.15f).toInt()
             
-            val cropLeft = (bounds.left - padding).coerceAtLeast(0)
-            val cropTop = (bounds.top - padding).coerceAtLeast(0)
-            
-            // Calculate width and height, clamping to the rotated bitmap boundaries
-            val cropRight = (bounds.right + padding).coerceAtMost(rotatedBitmap.width - 1)
-            val cropBottom = (bounds.bottom + padding).coerceAtMost(rotatedBitmap.height - 1)
+            val cropLeft = (bounds.left - paddingX).coerceAtLeast(0)
+            val cropTop = (bounds.top - paddingY).coerceAtLeast(0)
+            val cropRight = (bounds.right + paddingX).coerceAtMost(rotatedBitmap.width)
+            val cropBottom = (bounds.bottom + paddingY).coerceAtMost(rotatedBitmap.height)
 
             val width = cropRight - cropLeft
             val height = cropBottom - cropTop
