@@ -19,3 +19,10 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# Vosk and JNA Native Interop Safeguards for 16KB Page Maps
+-keep class com.sun.jna.** { *; }
+-keepclassmembers class * extends com.sun.jna.* { public *; }
+
+-keep class org.vosk.** { *; }
+-keepclassmembers class org.vosk.** { *; }

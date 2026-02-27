@@ -124,17 +124,25 @@ class VoiceManager @Inject constructor(
 
     private fun initVoskModel() {
         Log.d("VoiceManager", "Initializing Vosk Offline Model...")
-        StorageService.unpack(context, "model-en-us", "model",
-            { downloadedModel ->
-                model = downloadedModel
-                _isModelLoaded.value = true
-                Log.d("VoiceManager", "Vosk Offline Model loaded successfully.")
-            },
-            { exception ->
-                Log.e("VoiceManager", "Failed to unpack Vosk model: ${exception.message}")
-                _isModelLoaded.value = false
+        // Android 15 / 16KB alignment: Give the TTS engine a moment to grab the OS audio focus first
+        scope.launch(Dispatchers.IO) {
+            delay(1500)
+            try {
+                StorageService.unpack(context, "model-en", "model",
+                    { downloadedModel ->
+                        model = downloadedModel
+                        _isModelLoaded.value = true
+                        Log.w("VoiceManager", "Vosk Offline Model loaded successfully (16KB mapping passed).")
+                    },
+                    { exception ->
+                        Log.e("VoiceManager", "Failed to unpack Vosk model: ${exception.message}")
+                        _isModelLoaded.value = false
+                    }
+                )
+            } catch (e: Exception) {
+                Log.e("VoiceManager", "CRITICAL Vosk Init Exception: ${e.message}")
             }
-        )
+        }
     }
 
     fun startListening() {

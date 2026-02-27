@@ -341,7 +341,14 @@ fun WelcomeScreen(
                 )
             }
             FloatingActionButton(
-                onClick = { showChatDialog = true },
+                onClick = { 
+                    if (isListening) {
+                        viewModel.voiceManager.stopListening()
+                    } else {
+                        // Play a little tick sound or just let the visually pulsing ring indicate start
+                        viewModel.voiceManager.startListening()
+                    }
+                },
                 containerColor = if (isListening) GoogleBluePrimary else SurfaceLight,
                 contentColor = if (isListening) Color.White else GoogleBluePrimary,
                 elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp),
