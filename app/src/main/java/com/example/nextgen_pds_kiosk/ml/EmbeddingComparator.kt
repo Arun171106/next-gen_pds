@@ -26,4 +26,22 @@ object EmbeddingComparator {
         
         return dotProduct / (sqrt(norm1) * sqrt(norm2))
     }
+
+    /**
+     * Calculates the Euclidean (L2) Distance between two N-dimensional embedding vectors.
+     * DeepFace and standard FaceNet implementations typically use this metric.
+     * Returns a positive float value (0.0 represents a perfect identical match).
+     * Typical FaceNet thresholds are distance < 10.0 (un-normalized) or < 1.0 (L2-normalized).
+     */
+    fun euclideanDistance(v1: FloatArray, v2: FloatArray): Float {
+        if (v1.isEmpty() || v2.isEmpty() || v1.size != v2.size) return 0f
+
+        var sumSq = 0f
+        for (i in v1.indices) {
+            val diff = v1[i] - v2[i]
+            sumSq += diff * diff
+        }
+
+        return sqrt(sumSq)
+    }
 }

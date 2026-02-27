@@ -37,7 +37,9 @@ class FaceVerifyViewModel @Inject constructor(
     private val _state = MutableStateFlow<FaceVerifyState>(FaceVerifyState.Idle)
     val state: StateFlow<FaceVerifyState> = _state
 
-    private val MATCH_THRESHOLD = 0.72f
+    // L2 Distance threshold. Typically < 1.0 indicates a strong match for normalized vectors.
+    // 0.8f provides a solid balance of strict security while allowing minor lighting variations.
+    private val MATCH_THRESHOLD = 0.8f
     private var targetBeneficiary: Beneficiary? = null
     
     // Track Liveness Progress
@@ -161,15 +163,16 @@ class FaceVerifyViewModel @Inject constructor(
 
                     } else {
                         // Verification Logic
-                        val similarity = EmbeddingComparator.cosineSimilarity(liveEmbedding, target.embeddingVector)
-                        android.util.Log.d("FaceVerify", "Similarity for ${target.name}: $similarity")
+                        val distance = EmbeddingComparator.euclideanDistance(liveEmbedding, target.embeddingVector)
+                        android.util.Log.d("FaceVerify", "L2 Distance for ${target.name}: $distance")
 
-                        if (similarity >= MATCH_THRESHOLD) {
+                        // For L2 distance, strictly lower is better (closer to 0.0)
+                        if (distance <= MATCH_THRESHOLD) {
                             voiceManager.speak("Face verified. Welcome, ${target.name}.")
                             _state.value = FaceVerifyState.Success
                         } else {
                             voiceManager.speak("Face not matched. Please try again.")
-                            _state.value = FaceVerifyState.Failed("No match (score: ${String.format("%.2f", similarity)})")
+                            _state.value = FaceVerifyState.Failed("No match (L2 distance: ${String.format("%.2f", distance)})")
                             // Reset liveness and retry after short delay
                             delay(3000)
                             resetLiveness()
