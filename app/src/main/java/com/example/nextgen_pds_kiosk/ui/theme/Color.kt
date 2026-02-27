@@ -2,20 +2,32 @@ package com.example.nextgen_pds_kiosk.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Based on a "Futuristic 3D Kiosk App" design motif
-val PrimaryAccent = Color(0xFF00E5FF) // Cyan/Neon Blue
-val SecondaryAccent = Color(0xFF7C4DFF) // Deep Purple
-val TertiaryAccent = Color(0xFFFF007F) // Neon Pink (Optional Highlights)
+// Google Material 3 Professional Aesthetic Options
+val GoogleBluePrimary = Color(0xFF1A73E8)
+val GoogleBlueSecondary = Color(0xFF4285F4)
+val GoogleGreenSuccess = Color(0xFF1E8E3E)
+val GoogleRedError = Color(0xFFEA4335)
+val GoogleYellowWarning = Color(0xFFFBBC04)
 
-val DarkBackground = Color(0xFF0A0E17) // Deep Navy/Black
-val SurfaceColor = Color(0xFF141C2B) // Slightly lighter Navy for cards
-val SurfaceVariant = Color(0xFF1E2A40) // Inner card areas
+// Light Mode Surface Colors
+val BackgroundLight = Color(0xFFF8F9FA) // Standard Off-White Panel String
+val SurfaceLight = Color(0xFFFFFFFF) // Pure White Cards
+val SurfaceVariantLight = Color(0xFFE8EAED) // Used for unselected chips/borders
 
-val TextPrimary = Color(0xFFFFFFFF)
-val TextSecondary = Color(0xFF9EABCE)
+// Text Colors
+val TextOnLightPrimary = Color(0xFF202124) // Very dark gray, almost black
+val TextOnLightSecondary = Color(0xFF5F6368) // Standard gray for subtitles
 
-val SuccessGreen = Color(0xFF00E676)
-val ErrorRed = Color(0xFFFF3D00)
-val WarningYellow = Color(0xFFFFD600)
-
-val ParticleColor = Color(0xFF00E5FF).copy(alpha = 0.3f)
+// Keep legacy references for compile compatibility temporarily while we migrate
+val PrimaryAccent = GoogleBluePrimary
+val SecondaryAccent = GoogleBlueSecondary
+val TertiaryAccent = GoogleGreenSuccess
+val DarkBackground = BackgroundLight
+val SurfaceColor = SurfaceLight
+val SurfaceVariant = SurfaceVariantLight
+val TextPrimary = TextOnLightPrimary
+val TextSecondary = TextOnLightSecondary
+val SuccessGreen = GoogleGreenSuccess
+val ErrorRed = GoogleRedError
+val WarningYellow = GoogleYellowWarning
+val ParticleColor = Color.Transparent // Disable particles by making them transparent

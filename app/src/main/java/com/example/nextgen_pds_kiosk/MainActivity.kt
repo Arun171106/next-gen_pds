@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         setContent {
-            NextGenPDS_KioskTheme(darkTheme = true, dynamicColor = false) {
+            NextGenPDS_KioskTheme(darkTheme = false) {
                 // We layer the NavHost ON TOP of the AnimatedParticleBackground
                 // so the background seamlessly persists across route changes
                 Box(modifier = Modifier.fillMaxSize()) {

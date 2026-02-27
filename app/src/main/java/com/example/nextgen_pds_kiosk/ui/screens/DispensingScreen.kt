@@ -2,6 +2,7 @@ package com.example.nextgen_pds_kiosk.ui.screens
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.nextgen_pds_kiosk.ui.theme.*
 import com.example.nextgen_pds_kiosk.viewmodel.DispenserViewModel
 import kotlinx.coroutines.delay
 
@@ -28,9 +30,7 @@ fun DispensingScreen(
     viewModel: DispenserViewModel = hiltViewModel()
 ) {
     // Intercept hardware back button to prevent escaping the active dispense loop
-    androidx.activity.compose.BackHandler(true) {
-        // Do nothing (block back navigation)
-    }
+    androidx.activity.compose.BackHandler(true) {}
 
     // Dummy progression state simulating ESP32 load cell feedback
     var currentWeightKg by remember { mutableFloatStateOf(0f) }
@@ -58,6 +58,7 @@ fun DispensingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
             .padding(top = 48.dp, bottom = 48.dp, start = 32.dp, end = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
@@ -68,33 +69,33 @@ fun DispensingScreen(
             text = "Dispensing...",
             style = MaterialTheme.typography.displayMedium.copy(
                 fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground
+                color = TextOnLightPrimary
             )
         )
 
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Please do not remove the bag until the process is fully completed.",
+            text = "Please do not remove your bag until the process is fully completed.",
             style = MaterialTheme.typography.titleLarge.copy(
-                color = com.example.nextgen_pds_kiosk.ui.theme.WarningYellow
+                color = TextOnLightSecondary
             ),
             textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 32.dp)
+            modifier = Modifier.padding(horizontal = 48.dp)
         )
 
         Spacer(modifier = Modifier.height(64.dp))
 
-        // Large 3D Progress Ring simulating grains
+        // Large Progress Ring
         Box(
             modifier = Modifier.size(340.dp),
             contentAlignment = Alignment.Center
         ) {
             
-            // Background track
+            // Background track (Light gray)
             Canvas(modifier = Modifier.fillMaxSize()) {
                 drawArc(
-                    color = Color.DarkGray,
+                    color = SurfaceVariantLight,
                     startAngle = 0f,
                     sweepAngle = 360f,
                     useCenter = false,
@@ -102,7 +103,7 @@ fun DispensingScreen(
                 )
             }
             
-            // Foreground animated progress
+            // Foreground animated progress (Google Blue)
             val animatedProgress by animateFloatAsState(
                 targetValue = progress,
                 animationSpec = tween(durationMillis = 100, easing = LinearEasing),
@@ -111,7 +112,7 @@ fun DispensingScreen(
             
             Canvas(modifier = Modifier.fillMaxSize()) {
                 drawArc(
-                    color = com.example.nextgen_pds_kiosk.ui.theme.PrimaryAccent,
+                    color = GoogleBluePrimary,
                     startAngle = -90f,
                     sweepAngle = animatedProgress * 360f,
                     useCenter = false,
@@ -125,41 +126,41 @@ fun DispensingScreen(
                     text = String.format("%.1f", currentWeightKg),
                     style = MaterialTheme.typography.displayLarge.copy(
                         fontSize = 80.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground
+                        fontWeight = FontWeight.Bold,
+                        color = TextOnLightPrimary
                     )
                 )
                 Text(
                     text = "of $targetWeightKg kg",
-                    style = MaterialTheme.typography.headlineLarge.copy(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    style = MaterialTheme.typography.headlineSmall.copy(
+                        color = TextOnLightSecondary
+                    ),
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
                 Text(
                     text = "Wheat",
                     style = MaterialTheme.typography.titleLarge.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.padding(top = 8.dp)
+                        fontWeight = FontWeight.SemiBold,
+                        color = GoogleBluePrimary
+                    )
                 )
             }
         }
         
-        Spacer(modifier = Modifier.height(80.dp))
+        Spacer(modifier = Modifier.height(64.dp))
         
         // Progress percentage readout 
         Text(
-            text = String.format("%.0f%%", progress * 100),
-            style = MaterialTheme.typography.displayMedium.copy(
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
+            text = String.format("%.0f%% completed", progress * 100),
+            style = MaterialTheme.typography.headlineMedium.copy(
+                fontWeight = FontWeight.SemiBold,
+                color = GoogleGreenSuccess // Maps well to completion
             )
         )
         
-        Spacer(modifier = Modifier.height(48.dp))
+        Spacer(modifier = Modifier.height(64.dp))
         
-        // Pause / Resume Control
+        // Pause / Resume Control Pill
         if (currentWeightKg < targetWeightKg) {
             Button(
                 onClick = { 
@@ -175,22 +176,23 @@ fun DispensingScreen(
                     .height(64.dp),
                 shape = RoundedCornerShape(32.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isPaused) com.example.nextgen_pds_kiosk.ui.theme.SuccessGreen else com.example.nextgen_pds_kiosk.ui.theme.WarningYellow
-                )
+                    containerColor = if (isPaused) GoogleBluePrimary else SurfaceVariantLight,
+                    contentColor = if (isPaused) Color.White else TextOnLightPrimary
+                ),
+                elevation = ButtonDefaults.buttonElevation(if (isPaused) 4.dp else 0.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
                         imageVector = if (isPaused) Icons.Default.PlayArrow else Icons.Default.Pause,
                         contentDescription = if (isPaused) "Resume" else "Pause",
-                        tint = if (isPaused) Color.White else Color.Black
+                        modifier = Modifier.size(28.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
                     Text(
                         text = if (isPaused) "RESUME" else "PAUSE",
-                        style = MaterialTheme.typography.titleLarge.copy(
+                        style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isPaused) Color.White else Color.Black,
-                            letterSpacing = 2.sp
+                            letterSpacing = 1.sp
                         )
                     )
                 }

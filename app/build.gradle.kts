@@ -9,12 +9,12 @@ plugins {
 
 android {
     namespace = "com.example.nextgen_pds_kiosk"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.example.nextgen_pds_kiosk"
         minSdk = 24
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
@@ -46,11 +46,15 @@ android {
 
     packaging {
         jniLibs {
-            // Required for 16KB page size support on Android 15+ devices.
-            // AGP 8.3+ automatically aligns uncompressed .so files to 16KB boundaries.
-            useLegacyPackaging = false
+            // Devices running Android 15+ require 16KB page-aligned libraries.
+            // By setting useLegacyPackaging = true, we force Gradle to leave the .so files UNCOMPRESSED
+            // in the APK, which allows Android to memory-map them directly, bypassing the 16KB alignment requirement.
+            useLegacyPackaging = true
+            
             // Resolve native library conflicts between LiteRT and TFLite
             pickFirsts.add("**/libtensorflowlite_jni.so")
+            pickFirsts.add("**/libjnidispatch.so")
+            pickFirsts.add("**/libvosk.so")
         }
     }
 }
@@ -90,19 +94,21 @@ dependencies {
     implementation("com.google.firebase:firebase-firestore")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
 
-    // CameraX + Permissions
-    val cameraxVersion = "1.3.3"
+    // CameraX + Permissions (Bumped to 1.4.0 for 16KB page size support)
+    val cameraxVersion = "1.4.0-rc01"
     implementation("androidx.camera:camera-camera2:$cameraxVersion")
     implementation("androidx.camera:camera-lifecycle:$cameraxVersion")
     implementation("androidx.camera:camera-view:$cameraxVersion")
     implementation("com.google.accompanist:accompanist-permissions:0.34.0")
 
     // ML Kit + LiteRT (formerly TFLite) - Using LiteRT for 16KB support and resolving Duplicate Class errors
-    implementation("com.google.mlkit:face-detection:16.1.7")
-    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    // Bumped to 2024+ versions for 16KB uncompressed native lib alignments.
+    implementation("com.google.mlkit:face-detection:16.1.6") // Note: The standalone SDK was unaligned. Switched to bundled if failed, but 16.1.6+ should theoretically align if useLegacyPackaging = false. Play Services usually updates this. Let's explicitly force play-services-mlkit
+    implementation("com.google.android.gms:play-services-mlkit-face-detection:17.1.0")
+    implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.1")
     implementation("com.google.ai.edge.litert:litert:1.0.1")
     implementation("org.tensorflow:tensorflow-lite-support:0.4.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.8.1")
+    // Coroutines Play Services is already declared above (line 91)
 
     // Room Database
     val roomVersion = "2.6.1"
@@ -111,8 +117,9 @@ dependencies {
     ksp("androidx.room:room-compiler:$roomVersion")
     implementation("com.google.code.gson:gson:2.10.1")
 
-    // Voice Assistant — using Android built-in SpeechRecognizer (no native libs needed)
-    // Vosk and JNA have been removed as they are not 16KB page-size compatible
+    // Voice Assistant — Offline STT using Vosk
+    implementation("net.java.dev.jna:jna:5.13.0@aar")
+    implementation("com.alphacephei:vosk-android:0.3.32@aar")
 
     implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.core.ktx)

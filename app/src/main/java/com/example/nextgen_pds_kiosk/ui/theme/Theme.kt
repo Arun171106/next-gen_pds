@@ -2,38 +2,38 @@ package com.example.nextgen_pds_kiosk.ui.theme
 
 import android.app.Activity
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// The Kiosk is exclusively a Dark Theme UI based on its futuristic particle design
-private val KioskColorScheme = darkColorScheme(
-    primary = PrimaryAccent,
-    secondary = SecondaryAccent,
-    tertiary = TertiaryAccent,
-    background = DarkBackground,
-    surface = SurfaceColor,
-    surfaceVariant = SurfaceVariant,
-    onPrimary = TextPrimary,
-    onSecondary = TextPrimary,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
-    onSurfaceVariant = TextSecondary,
-    error = ErrorRed,
-    onError = TextPrimary
+// Switched to Light Theme for a clean, professional "Google App" look
+private val KioskLightColorScheme = lightColorScheme(
+    primary = GoogleBluePrimary,
+    secondary = GoogleBlueSecondary,
+    tertiary = GoogleGreenSuccess,
+    background = BackgroundLight,
+    surface = SurfaceLight,
+    surfaceVariant = SurfaceVariantLight,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onBackground = TextOnLightPrimary,
+    onSurface = TextOnLightPrimary,
+    onSurfaceVariant = TextOnLightSecondary,
+    error = GoogleRedError,
+    onError = Color.White
 )
 
 @Composable
 fun NextGenPDS_KioskTheme(
-    // Always force dark mode for the Kiosk mapping dynamic colors off
-    darkTheme: Boolean = true,
-    dynamicColor: Boolean = false,
+    // Force light mode for standard professional aesthetic
+    darkTheme: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = KioskColorScheme
+    val colorScheme = KioskLightColorScheme
     val view = LocalView.current
     
     // Set status bar colors
@@ -42,7 +42,8 @@ fun NextGenPDS_KioskTheme(
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.background.toArgb()
             window.navigationBarColor = colorScheme.background.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
+            // Set text icons to be dark (true) because the background is now light
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = true
         }
     }
 

@@ -11,7 +11,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.nextgen_pds_kiosk.ui.theme.*
@@ -24,47 +24,39 @@ fun KioskTopAppBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp),
+            .padding(bottom = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Bordered back button
+        // Light themed circular back button with shadow
         IconButton(
             onClick = onNavigateBack,
             modifier = Modifier
-                .size(44.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(SurfaceVariant)
-                .border(1.dp, PrimaryAccent.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                .size(48.dp)
+                .background(SurfaceLight, RoundedCornerShape(14.dp))
+                .shadow(elevation = 2.dp, shape = RoundedCornerShape(14.dp))
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                 contentDescription = "Go Back",
-                tint = PrimaryAccent,
-                modifier = Modifier.size(20.dp)
+                tint = TextOnLightPrimary,
+                modifier = Modifier.size(24.dp)
             )
         }
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // Step label pill
+        // Clean light step label pill
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(50.dp))
-                .background(SurfaceVariant)
-                .border(
-                    1.dp,
-                    Brush.horizontalGradient(
-                        colors = listOf(PrimaryAccent.copy(alpha = 0.4f), SecondaryAccent.copy(alpha = 0.3f))
-                    ),
-                    RoundedCornerShape(50.dp)
-                )
-                .padding(horizontal = 20.dp, vertical = 8.dp)
+                .background(SurfaceVariantLight)
+                .padding(horizontal = 24.dp, vertical = 8.dp)
         ) {
             Text(
                 text = stepLabel,
                 style = MaterialTheme.typography.labelLarge.copy(
-                    color = PrimaryAccent,
-                    letterSpacing = 2.sp
+                    color = TextOnLightSecondary,
+                    letterSpacing = 1.sp
                 )
             )
         }

@@ -32,8 +32,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -119,8 +119,8 @@ fun WelcomeScreen(
         label = "mic_scale"
     )
     val micAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = if (isListening) 0.9f else 0.4f,
+        initialValue = 0.1f,
+        targetValue = if (isListening) 0.3f else 0.1f,
         animationSpec = infiniteRepeatable(
             animation = tween(800),
             repeatMode = RepeatMode.Reverse
@@ -128,23 +128,8 @@ fun WelcomeScreen(
         label = "mic_alpha"
     )
 
-    Box(modifier = Modifier.fillMaxSize().background(DarkBackground)) {
-
-        // Background radial glow — top center (no external libs, just a Box)
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .size(600.dp)
-                .offset(y = (-150).dp)
-                .background(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            PrimaryAccent.copy(alpha = 0.08f),
-                            Color.Transparent
-                        )
-                    )
-                )
-        )
+    // Solid Light Background (Google Aesthetic)
+    Box(modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
 
         // ── Admin settings button (top-right) ──
         IconButton(
@@ -152,15 +137,15 @@ fun WelcomeScreen(
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(28.dp)
-                .size(44.dp)
-                .background(SurfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                .border(1.dp, PrimaryAccent.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                .size(48.dp)
+                .background(SurfaceLight, CircleShape)
+                .shadow(elevation = 2.dp, shape = CircleShape)
         ) {
             Icon(
                 imageVector = Icons.Default.Settings,
                 contentDescription = "Admin Settings",
-                tint = TextSecondary,
-                modifier = Modifier.size(22.dp)
+                tint = TextOnLightSecondary,
+                modifier = Modifier.size(24.dp)
             )
         }
         
@@ -169,8 +154,8 @@ fun WelcomeScreen(
             modifier = Modifier
                 .align(Alignment.TopStart)
                 .padding(28.dp)
-                .background(SurfaceVariant.copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                .border(1.dp, PrimaryAccent.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                .background(SurfaceLight, RoundedCornerShape(16.dp))
+                .shadow(elevation = 2.dp, shape = RoundedCornerShape(16.dp))
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -180,11 +165,10 @@ fun WelcomeScreen(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isSelected) PrimaryAccent.copy(alpha = 0.2f) else Color.Transparent)
+                        .background(if (isSelected) GoogleBluePrimary.copy(alpha = 0.1f) else Color.Transparent)
                         .clickable {
                             val newLocale = Locale(langCode)
                             viewModel.voiceManager.setLanguage(newLocale)
-                            // Acknowledge change via TTS specifically in the new language
                             val msg = when (langCode) {
                                 "hi" -> "Hindi shuru"
                                 "ta" -> "Tamil arambam"
@@ -192,11 +176,11 @@ fun WelcomeScreen(
                             }
                             viewModel.voiceManager.speak(msg)
                         }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
                     Text(
                         text = label,
-                        color = if (isSelected) PrimaryAccent else TextSecondary.copy(alpha = 0.6f),
+                        color = if (isSelected) GoogleBluePrimary else TextOnLightSecondary,
                         style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold)
                     )
                 }
@@ -212,124 +196,97 @@ fun WelcomeScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Logo with subtle glow ring
-            Box(contentAlignment = Alignment.Center) {
-                // Outer glow ring
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    PrimaryAccent.copy(alpha = 0.18f),
-                                    Color.Transparent
-                                )
-                            ),
-                            shape = CircleShape
-                        )
-                )
-                Icon(
-                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                    contentDescription = "App Logo",
-                    modifier = Modifier
-                        .size(100.dp)
-                        .combinedClickable(
-                            onClick = onNavigateNext,
-                            onLongClick = { showChatDialog = true }
-                        ),
-                    tint = PrimaryAccent
-                )
-            }
+            // Logo without distracting glows, just clean and sharp
+            Icon(
+                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                contentDescription = "App Logo",
+                modifier = Modifier
+                    .size(120.dp)
+                    .combinedClickable(
+                        onClick = onNavigateNext,
+                        onLongClick = { showChatDialog = true }
+                    ),
+                tint = GoogleBluePrimary
+            )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
             // Headline
             Text(
                 text = "Smart PDS Kiosk",
                 style = MaterialTheme.typography.displayMedium.copy(
-                    fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary,
-                    letterSpacing = 1.sp
+                    fontWeight = FontWeight.Bold, // Cleaner font weight
+                    color = TextOnLightPrimary,
+                    letterSpacing = (-0.5).sp
                 ),
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Accent divider line
-            Box(
-                modifier = Modifier
-                    .width(80.dp)
-                    .height(3.dp)
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(Color.Transparent, PrimaryAccent, SecondaryAccent, Color.Transparent)
-                        ),
-                        shape = RoundedCornerShape(50)
-                    )
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
                 text = "Next-Gen Public Distribution System",
-                style = MaterialTheme.typography.titleMedium.copy(
-                    color = TextSecondary,
-                    letterSpacing = 0.5.sp
+                style = MaterialTheme.typography.titleLarge.copy(
+                    color = TextOnLightSecondary,
+                    fontWeight = FontWeight.Normal
                 ),
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(56.dp))
+            Spacer(modifier = Modifier.height(64.dp))
 
-            // ── START Button with gradient ──
-            Box(
+            // ── START Button (Solid Google Pill) ──
+            Button(
+                onClick = onNavigateNext,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(36.dp))
-                    .background(
-                        brush = Brush.horizontalGradient(
-                            colors = listOf(PrimaryAccent, SecondaryAccent)
-                        )
-                    )
-                    .border(1.dp, PrimaryAccent.copy(alpha = 0.5f), RoundedCornerShape(36.dp))
-                    .clickable(onClick = onNavigateNext)
-                    .padding(horizontal = 56.dp, vertical = 22.dp),
-                contentAlignment = Alignment.Center
+                    .height(64.dp)
+                    .widthOutlined(300.dp), // Fallback size, filled below
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = GoogleBluePrimary,
+                    contentColor = Color.White
+                ),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 8.dp),
+                contentPadding = PaddingValues(horizontal = 48.dp)
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "START",
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontWeight = FontWeight.ExtraBold,
-                            color = DarkBackground,
-                            letterSpacing = 3.sp
+                        style = MaterialTheme.typography.titleLarge.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
                         )
                     )
-                    Spacer(modifier = Modifier.width(16.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
                     Icon(
                         imageVector = Icons.Default.ArrowForward,
                         contentDescription = null,
-                        tint = DarkBackground,
                         modifier = Modifier.size(28.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             // Voice hint text
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .background(SurfaceVariantLight, CircleShape)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
+            ) {
                 Icon(
                     imageVector = if (isListening) Icons.Default.Mic else Icons.Default.MicOff,
                     contentDescription = null,
-                    tint = if (isListening) PrimaryAccent else TextSecondary.copy(alpha = 0.5f),
-                    modifier = Modifier.size(16.dp)
+                    tint = if (isListening) GoogleBluePrimary else TextOnLightSecondary,
+                    modifier = Modifier.size(18.dp)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = if (isListening) "Listening… say \"Start\"" else "Tap mic to activate voice",
+                    text = if (isListening) "Listening… say \"Start\"" else "Tap mic below to activate voice",
                     style = MaterialTheme.typography.bodyMedium.copy(
-                        color = if (isListening) PrimaryAccent.copy(alpha = 0.8f) else TextSecondary.copy(alpha = 0.5f)
+                        color = if (isListening) GoogleBluePrimary else TextOnLightSecondary,
+                        fontWeight = FontWeight.Medium
                     )
                 )
             }
@@ -342,8 +299,8 @@ fun WelcomeScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 24.dp),
             style = MaterialTheme.typography.bodySmall.copy(
-                color = TextSecondary.copy(alpha = 0.35f),
-                letterSpacing = 1.sp
+                color = TextOnLightSecondary.copy(alpha = 0.6f),
+                letterSpacing = 0.5.sp
             )
         )
 
@@ -353,16 +310,17 @@ fun WelcomeScreen(
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .padding(start = 24.dp, bottom = 24.dp)
-                .background(SurfaceColor.copy(alpha = 0.85f), RoundedCornerShape(50.dp))
-                .border(1.dp, SuccessGreen.copy(alpha = 0.3f), RoundedCornerShape(50.dp))
+                .background(SurfaceLight, CircleShape)
+                .border(1.dp, SurfaceVariantLight, CircleShape)
+                .shadow(1.dp, CircleShape)
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         ) {
-            Box(modifier = Modifier.size(8.dp).background(SuccessGreen, CircleShape))
-            Spacer(modifier = Modifier.width(8.dp))
+            Box(modifier = Modifier.size(10.dp).background(GoogleGreenSuccess, CircleShape))
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = "DB Active · $dbCount enrolled",
-                color = TextSecondary,
-                style = MaterialTheme.typography.bodySmall.copy(letterSpacing = 0.5.sp)
+                color = TextOnLightSecondary,
+                style = MaterialTheme.typography.labelLarge
             )
         }
 
@@ -372,20 +330,21 @@ fun WelcomeScreen(
                 .align(Alignment.BottomEnd)
                 .padding(28.dp)
         ) {
-            // Pulse ring
+            // Pulse ring based on light theme
             if (isListening) {
                 Box(
                     modifier = Modifier
                         .size(64.dp)
                         .scale(micPulse)
-                        .background(PrimaryAccent.copy(alpha = micAlpha * 0.3f), CircleShape)
+                        .background(GoogleBluePrimary.copy(alpha = micAlpha), CircleShape)
                         .align(Alignment.Center)
                 )
             }
             FloatingActionButton(
                 onClick = { showChatDialog = true },
-                containerColor = if (isListening) PrimaryAccent else SurfaceVariant,
-                contentColor = if (isListening) DarkBackground else PrimaryAccent,
+                containerColor = if (isListening) GoogleBluePrimary else SurfaceLight,
+                contentColor = if (isListening) Color.White else GoogleBluePrimary,
+                elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 2.dp),
                 modifier = Modifier.size(56.dp)
             ) {
                 Icon(
@@ -397,3 +356,6 @@ fun WelcomeScreen(
         }
     }
 }
+
+// Helper for fixed width buttons without breaking imports
+fun Modifier.widthOutlined(width: androidx.compose.ui.unit.Dp) = this.requiredWidthIn(min = width)

@@ -5,9 +5,6 @@ import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.speech.RecognitionListener
-import android.speech.RecognizerIntent
-import android.speech.SpeechRecognizer
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -19,6 +16,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
+import org.vosk.Model
+import org.vosk.Recognizer
+import org.vosk.android.StorageService
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,13 +49,18 @@ class VoiceManager @Inject constructor(
     private val _currentLocale = MutableStateFlow(Locale.ENGLISH)
     val currentLocale: StateFlow<Locale> = _currentLocale
 
-    // Android SpeechRecognizer — MUST be created and used on the Main thread
-    private var speechRecognizer: SpeechRecognizer? = null
+    // Vosk Offline Speech Recognizer
+    private var model: Model? = null
+    private var voskRecognizer: Recognizer? = null
     private var isRecognizerBusy = false
     private val mainHandler = Handler(Looper.getMainLooper())
-
-    // Offline mode: true by default, flips to false if offline pack is missing (error 12)
-    private var useOfflineMode = true
+    
+    // Flag to track if the Model is loaded
+    private val _isModelLoaded = MutableStateFlow(false)
+    val isModelLoaded: StateFlow<Boolean> = _isModelLoaded
+    
+    // VoiceProcessor stream tracking
+    private var audioRecordingJob: Job? = null
 
     // State Flows exposed to ViewModels/UI
     private val _isListening = MutableStateFlow(false)
@@ -84,8 +89,8 @@ class VoiceManager @Inject constructor(
 
     init {
         tts = TextToSpeech(context, this)
-        // SpeechRecognizer MUST be created on the Main thread
-        mainHandler.post { initSpeechRecognizer() }
+        // Load Vosk Model on background thread
+        initVoskModel()
     }
 
     override fun onInit(status: Int) {
@@ -117,168 +122,87 @@ class VoiceManager @Inject constructor(
         }
     }
 
-    private fun initSpeechRecognizer() {
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            Log.e("VoiceManager", "Speech Recognition is NOT available on this device!")
-            return
-        }
-
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(context)
-        
-        speechRecognizer?.setRecognitionListener(object : RecognitionListener {
-            override fun onReadyForSpeech(params: Bundle?) {
-                _isListening.value = true
-                isRecognizerBusy = true
-                _isVoiceIdle.value = false
-                resetIdleTimer()
-                Log.d("VoiceManager", "SpeechRecognizer: Ready for speech")
+    private fun initVoskModel() {
+        Log.d("VoiceManager", "Initializing Vosk Offline Model...")
+        StorageService.unpack(context, "model-en-us", "model",
+            { downloadedModel ->
+                model = downloadedModel
+                _isModelLoaded.value = true
+                Log.d("VoiceManager", "Vosk Offline Model loaded successfully.")
+            },
+            { exception ->
+                Log.e("VoiceManager", "Failed to unpack Vosk model: ${exception.message}")
+                _isModelLoaded.value = false
             }
-
-            override fun onBeginningOfSpeech() {
-                Log.d("VoiceManager", "SpeechRecognizer: Speech started")
-            }
-
-            override fun onRmsChanged(rmsdB: Float) {}
-
-            override fun onBufferReceived(buffer: ByteArray?) {}
-
-            override fun onEndOfSpeech() {
-                Log.d("VoiceManager", "SpeechRecognizer: End of speech")
-            }
-
-            override fun onError(error: Int) {
-                val errorMsg = when (error) {
-                    SpeechRecognizer.ERROR_AUDIO -> "Audio error"
-                    SpeechRecognizer.ERROR_CLIENT -> "Client error"
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Missing RECORD_AUDIO permission"
-                    SpeechRecognizer.ERROR_NETWORK -> "Network error — no internet"
-                    SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Network timeout"
-                    SpeechRecognizer.ERROR_NO_MATCH -> "No speech match"
-                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Recognizer busy"
-                    SpeechRecognizer.ERROR_SERVER -> "Server error"
-                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Speech timeout"
-                    VoiceSetupHelper.ERROR_OFFLINE_PACK_MISSING -> "Offline language pack not installed"
-                    else -> "Unknown error $error"
-                }
-                Log.w("VoiceManager", "SpeechRecognizer error: $errorMsg")
-
-                isRecognizerBusy = false
-                _isListening.value = false
-
-                when (error) {
-                    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT ->
-                    {
-                        Log.d("VoiceManager", "Network error, falling back to System default routing.")
-                        useOfflineMode = false
-                        scope.launch { delay(1000); startListening() }
-                    }
-                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
-                        // Offline pack not working; fall back to online
-                        useOfflineMode = false
-                        scope.launch { delay(1000); startListening() }
-                    }
-                    VoiceSetupHelper.ERROR_OFFLINE_PACK_MISSING -> {
-                        // Offline pack not installed — notify admin
-                        voiceSetupHelper.onOfflineSttPackMissing()
-                        Log.w("VoiceManager", "Offline STT missing — admin needs to install offline language pack")
-                        useOfflineMode = false
-                        scope.launch { delay(1000); startListening() }
-                    }
-                    SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> {
-                        // Don't restart — needs user action
-                        Log.e("VoiceManager", "RECORD_AUDIO permission missing — cannot restart")
-                    }
-                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> {
-                        // Destroy and recreate the recognizer to clear the busy state
-                        mainHandler.post {
-                            speechRecognizer?.destroy()
-                            speechRecognizer = null
-                            initSpeechRecognizer()
-                        }
-                        scope.launch { delay(1000); startListening() }
-                    }
-                    SpeechRecognizer.ERROR_NO_MATCH -> {
-                        // Normal: user was silent or speech didn't match. Restart quickly.
-                        scope.launch { delay(500); startListening() }
-                    }
-                    else -> {
-                        // Auto-restart for all other transient errors, with enough delay to release hardware
-                        scope.launch { delay(1000); startListening() }
-                    }
-                }
-            }
-
-            override fun onResults(results: Bundle?) {
-                isRecognizerBusy = false
-                _isListening.value = false
-
-                val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                val text = matches?.firstOrNull() ?: ""
-                Log.d("VoiceManager", "SpeechRecognizer result: '$text'")
-
-                if (text.isNotBlank()) {
-                    _recognizedText.value = text
-                    addChatMessage(ChatMessage(isUser = true, text = text))
-                    handleRecognizedSpeech(text)
-                    resetIdleTimer() // Reset idle countdown when user actually speaks
-                }
-
-                // Auto-restart for continuous listening
-                // Delay must be long enough for Android to release the audio focus
-                scope.launch {
-                    delay(800)
-                    if (!_isListening.value && !_isVoiceIdle.value) {
-                        startListening()
-                    }
-                }
-            }
-
-            override fun onPartialResults(partialResults: Bundle?) {
-                val matches = partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                val partial = matches?.firstOrNull() ?: ""
-                if (partial.isNotBlank()) {
-                    _recognizedText.value = partial
-                }
-            }
-
-            override fun onEvent(eventType: Int, params: Bundle?) {}
-        })
-
-        Log.d("VoiceManager", "Android SpeechRecognizer initialized successfully")
+        )
     }
 
     fun startListening() {
         mainHandler.post {
             if (_isListening.value || isRecognizerBusy) return@post
             if (tts?.isSpeaking == true) return@post
-
-            if (speechRecognizer == null) {
-                Log.e("VoiceManager", "SpeechRecognizer is null, reinitializing...")
-                initSpeechRecognizer()
-            }
-
-            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, _currentLocale.value.toString())
-                putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
-                putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                // Silence detection tuning — makes recognition end faster
-                putExtra("android.speech.extra.DICTATION_MODE", false)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS, 1500L)
-                putExtra(RecognizerIntent.EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS, 1000L)
-                // Only request offline if a pack is actually known to be available
-                if (useOfflineMode) {
-                    putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
-                }
+            if (model == null) {
+                Log.w("VoiceManager", "Vosk model not yet loaded, postponing listen...")
+                scope.launch { delay(1000); startListening() }
+                return@post
             }
 
             try {
-                speechRecognizer?.startListening(intent)
-                Log.d("VoiceManager", "startListening() called on Main thread")
+                // Vosk expects 16kHz mono 16-bit PCM buffer by default
+                voskRecognizer = Recognizer(model, 16000.0f)
+                
+                _isListening.value = true
+                isRecognizerBusy = true
+                _isVoiceIdle.value = false
+                resetIdleTimer()
+                Log.d("VoiceManager", "Vosk Recognizer initialized and listening...")
+
+                // Start consuming audio from the VoiceProcessor
+                audioRecordingJob?.cancel()
+                audioRecordingJob = scope.launch(Dispatchers.IO) {
+                    val voiceProcessor = VoiceProcessor(VoiceStateManager()) // Initialize standalone or pass gracefully
+                    voiceProcessor.startRecording().collect { buffer ->
+                        if (!_isListening.value) return@collect
+                        
+                        // voskRecognizer expects ShortArray buffer to be passed directly
+                        val isFinal = voskRecognizer?.acceptWaveForm(buffer, buffer.size) ?: false
+                        
+                        if (isFinal) {
+                            val resultJson = voskRecognizer?.result ?: ""
+                            processVoskResult(resultJson)
+                        } else {
+                            // Can optionally extract partial results here to update UI
+                            val partialJson = voskRecognizer?.partialResult ?: ""
+                        }
+                    }
+                }
             } catch (e: Exception) {
                 Log.e("VoiceManager", "startListening failed: ${e.message}")
                 _isListening.value = false
+                isRecognizerBusy = false
             }
+        }
+    }
+    
+    private fun processVoskResult(json: String) {
+        try {
+            // Vosk result structure: {"text": "hello world"}
+            val root = org.json.JSONObject(json)
+            val text = root.optString("text", "")
+            
+            if (text.isNotBlank()) {
+                Log.d("VoiceManager", "Vosk Recognized: '$text'")
+                _recognizedText.value = text
+                addChatMessage(ChatMessage(isUser = true, text = text))
+                
+                // Immediately stop listening so android TTS doesn't feed back into STT
+                stopListening()
+                
+                handleRecognizedSpeech(text)
+                resetIdleTimer()
+            }
+        } catch (e: Exception) {
+            Log.e("VoiceManager", "Error parsing Vosk result: ${e.message}")
         }
     }
 
@@ -286,8 +210,10 @@ class VoiceManager @Inject constructor(
         mainHandler.post {
             _isListening.value = false
             isRecognizerBusy = false
+            audioRecordingJob?.cancel()
             try {
-                speechRecognizer?.stopListening()
+                voskRecognizer?.close()
+                voskRecognizer = null
             } catch (e: Exception) {
                 Log.e("VoiceManager", "stopListening error: ${e.message}")
             }
@@ -455,9 +381,9 @@ class VoiceManager @Inject constructor(
         cancelIdleTimer()
         tts?.shutdown()
         try {
-            speechRecognizer?.destroy()
+            model?.close()
         } catch (e: Exception) {
-            Log.e("VoiceManager", "Error destroying SpeechRecognizer: ${e.message}")
+            Log.e("VoiceManager", "Error closing Vosk Model: ${e.message}")
         }
     }
 }

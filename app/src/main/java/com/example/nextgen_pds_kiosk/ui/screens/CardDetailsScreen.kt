@@ -7,7 +7,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -19,6 +18,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.nextgen_pds_kiosk.data.Beneficiary
 import com.example.nextgen_pds_kiosk.data.model.FamilyMember
-import com.example.nextgen_pds_kiosk.ui.components.KioskPrimaryButton
 import com.example.nextgen_pds_kiosk.ui.components.KioskTopAppBar
 import com.example.nextgen_pds_kiosk.ui.theme.*
 import com.example.nextgen_pds_kiosk.viewmodel.AuthState
@@ -54,8 +53,8 @@ fun CardDetailsScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground)
-            .padding(top = 48.dp, bottom = 48.dp, start = 28.dp, end = 28.dp),
+            .background(MaterialTheme.colorScheme.background)
+            .padding(top = 48.dp, bottom = 48.dp, start = 32.dp, end = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         KioskTopAppBar(stepLabel = "STEP 2 OF 3", onNavigateBack = onNavigateBack)
@@ -65,15 +64,16 @@ fun CardDetailsScreen(
             is AuthState.Loading -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = PrimaryAccent)
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text("Loading card details…", color = TextSecondary)
+                        CircularProgressIndicator(color = GoogleBluePrimary)
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("Loading smart card details…", color = TextOnLightSecondary)
                     }
                 }
             }
             is AuthState.Error -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(s.message, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                    Text(s.message, color = GoogleRedError, textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.titleMedium)
                 }
             }
             is AuthState.Success -> {
@@ -86,8 +86,8 @@ fun CardDetailsScreen(
                 }
 
                 LazyColumn(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    modifier = Modifier.weight(1f).fillMaxWidth(0.9f), // Constrain width for cleaner look on large screens
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     // Header card
                     item { SmartCardHeader(beneficiary) }
@@ -97,22 +97,22 @@ fun CardDetailsScreen(
 
                     // Member selection
                     item {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
                         Text(
                             text = "Select Member Collecting Today",
                             style = MaterialTheme.typography.titleLarge.copy(
-                                fontWeight = FontWeight.Bold, color = TextPrimary
+                                fontWeight = FontWeight.Bold, color = TextOnLightPrimary
                             )
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Tap the family member who will verify their face",
-                            style = MaterialTheme.typography.bodyMedium.copy(color = TextSecondary)
+                            style = MaterialTheme.typography.bodyLarge.copy(color = TextOnLightSecondary)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    // Member cards (horizontal if few, vertical if many)
+                    // Member cards
                     if (familyMembers.isEmpty()) {
                         item {
                             MemberCard(
@@ -144,22 +144,35 @@ fun CardDetailsScreen(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-                KioskPrimaryButton(
-                    text = if (selectedMember != null)
-                        "VERIFY ${selectedMember!!.name.uppercase()}'S FACE →"
-                    else "SELECT A MEMBER TO CONTINUE",
-                    enabled = selectedMember != null,
+                Button(
                     onClick = {
                         selectedMember?.let { member ->
-                            // Find the beneficiary record for this member
-                            // Members on the same card use the same smartCardNo
-                            // The memberId in the DB is the beneficiary who has that member's name
                             onMemberSelected(cardNo, member.memberId)
                         }
-                    }
-                )
+                    },
+                    enabled = selectedMember != null,
+                    modifier = Modifier.height(64.dp).fillMaxWidth(0.6f),
+                    shape = CircleShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GoogleBluePrimary,
+                        disabledContainerColor = SurfaceVariantLight,
+                        contentColor = Color.White,
+                        disabledContentColor = TextOnLightSecondary
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 8.dp)
+                ) {
+                    Text(
+                        text = if (selectedMember != null)
+                            "VERIFY ${selectedMember!!.name.uppercase()}'S FACE →"
+                        else "SELECT A MEMBER TO CONTINUE",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.sp
+                        )
+                    )
+                }
             }
         }
     }
@@ -174,19 +187,17 @@ private fun SmartCardHeader(beneficiary: Beneficiary) {
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
-        elevation = CardDefaults.cardElevation(6.dp)
+        modifier = Modifier.fillMaxWidth().shadow(elevation = 2.dp, shape = RoundedCornerShape(24.dp)),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceLight)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Avatar
             Box(
-                modifier = Modifier.size(72.dp).clip(CircleShape)
-                    .background(SurfaceVariant),
+                modifier = Modifier.size(80.dp).clip(CircleShape).background(SurfaceVariantLight),
                 contentAlignment = Alignment.Center
             ) {
                 if (bitmap != null) {
@@ -194,44 +205,44 @@ private fun SmartCardHeader(beneficiary: Beneficiary) {
                         modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 } else {
                     Icon(Icons.Default.Person, null,
-                        modifier = Modifier.size(40.dp), tint = TextSecondary)
+                        modifier = Modifier.size(48.dp), tint = TextOnLightSecondary)
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(beneficiary.name,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = TextPrimary))
+                    style = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold, color = TextOnLightPrimary))
                 Text(
                     text = beneficiary.smartCardNo.ifBlank { beneficiary.beneficiaryId },
-                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                    style = MaterialTheme.typography.bodyLarge.copy(color = TextOnLightSecondary)
                 )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     val badgeColor = when (beneficiary.cardType) {
-                        "AAY" -> Color(0xFFD32F2F)
-                        "PHH" -> Color(0xFF1565C0)
-                        else -> Color(0xFF2E7D32)
+                        "AAY" -> GoogleRedError
+                        "PHH" -> GoogleBlueSecondary
+                        else -> GoogleGreenSuccess
                     }
                     Surface(shape = RoundedCornerShape(50), color = badgeColor) {
                         Text(beneficiary.cardType.ifBlank { "PHH" },
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold, color = Color.White))
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold, color = Color.White))
                     }
-                    val statusColor = if (beneficiary.status == "ACTIVE") Color(0xFF00E676) else MaterialTheme.colorScheme.error
+                    val statusColor = if (beneficiary.status == "ACTIVE") GoogleGreenSuccess else GoogleRedError
                     Surface(shape = RoundedCornerShape(50), color = statusColor.copy(alpha = 0.15f)) {
                         Text(beneficiary.status.ifBlank { "ACTIVE" },
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
-                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold, color = statusColor))
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold, color = statusColor))
                     }
                 }
             }
         }
         if (beneficiary.address.isNotBlank()) {
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp), color = SurfaceVariant)
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp), color = SurfaceVariantLight)
             Text(
                 text = beneficiary.address,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary)
+                modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                style = MaterialTheme.typography.bodyMedium.copy(color = TextOnLightSecondary)
             )
         }
     }
@@ -240,20 +251,21 @@ private fun SmartCardHeader(beneficiary: Beneficiary) {
 @Composable
 private fun EntitlementRow(beneficiary: Beneficiary) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = SurfaceColor)
+        modifier = Modifier.fillMaxWidth().shadow(elevation = 1.dp, shape = RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceLight)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             Text("Monthly Entitlement",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold, color = PrimaryAccent))
-            Spacer(modifier = Modifier.height(12.dp))
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold, color = GoogleBluePrimary))
+            Spacer(modifier = Modifier.height(16.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                if (beneficiary.riceKg > 0) EntitlementChip("Rice", "${beneficiary.riceKg}kg", Color(0xFFFF8F00))
-                if (beneficiary.wheatKg > 0) EntitlementChip("Wheat", "${beneficiary.wheatKg}kg", Color(0xFFFFA000))
-                if (beneficiary.sugarKg > 0) EntitlementChip("Sugar", "${beneficiary.sugarKg}kg", Color(0xFF7B1FA2))
-                if (beneficiary.dalKg > 0) EntitlementChip("Dal", "${beneficiary.dalKg}kg", Color(0xFF1976D2))
-                if (beneficiary.keroseneL > 0) EntitlementChip("Kerosene", "${beneficiary.keroseneL}L", Color(0xFFE64A19))
+                // Using solid Google Colors for chips
+                if (beneficiary.riceKg > 0) EntitlementChip("Rice", "${beneficiary.riceKg}kg", Color(0xFFF29900))
+                if (beneficiary.wheatKg > 0) EntitlementChip("Wheat", "${beneficiary.wheatKg}kg", GoogleYellowWarning)
+                if (beneficiary.sugarKg > 0) EntitlementChip("Sugar", "${beneficiary.sugarKg}kg", Color(0xFFA142F4))
+                if (beneficiary.dalKg > 0) EntitlementChip("Dal", "${beneficiary.dalKg}kg", GoogleBlueSecondary)
+                if (beneficiary.keroseneL > 0) EntitlementChip("Kerosene", "${beneficiary.keroseneL}L", GoogleRedError)
             }
         }
     }
@@ -262,13 +274,13 @@ private fun EntitlementRow(beneficiary: Beneficiary) {
 @Composable
 private fun EntitlementChip(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(shape = RoundedCornerShape(8.dp), color = color.copy(alpha = 0.15f)) {
+        Surface(shape = RoundedCornerShape(12.dp), color = color.copy(alpha = 0.1f)) {
             Text(value,
-                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold, color = color))
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, color = color))
         }
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(label, style = MaterialTheme.typography.labelSmall.copy(color = TextSecondary))
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(label, style = MaterialTheme.typography.bodyMedium.copy(color = TextOnLightSecondary))
     }
 }
 
@@ -291,23 +303,23 @@ private fun MemberCard(
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .border(
-                width = if (isSelected) 2.dp else 0.dp,
-                color = if (isSelected) PrimaryAccent else Color.Transparent,
-                shape = RoundedCornerShape(16.dp)
+                width = if (isSelected) 2.dp else 1.dp,
+                color = if (isSelected) GoogleBluePrimary else SurfaceVariantLight,
+                shape = RoundedCornerShape(20.dp)
             ),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) SurfaceColor else SurfaceVariant.copy(alpha = 0.5f)
+            containerColor = if (isSelected) GoogleBluePrimary.copy(alpha = 0.05f) else SurfaceLight
         ),
-        elevation = CardDefaults.cardElevation(if (isSelected) 6.dp else 2.dp)
+        elevation = CardDefaults.cardElevation(if (isSelected) 2.dp else 0.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
+            modifier = Modifier.padding(20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
-                modifier = Modifier.size(56.dp).clip(CircleShape)
-                    .background(if (isSelected) PrimaryAccent.copy(alpha = 0.2f) else SurfaceVariant),
+                modifier = Modifier.size(64.dp).clip(CircleShape)
+                    .background(if (isSelected) GoogleBluePrimary.copy(alpha = 0.15f) else SurfaceVariantLight),
                 contentAlignment = Alignment.Center
             ) {
                 if (bitmap != null) {
@@ -316,31 +328,30 @@ private fun MemberCard(
                 } else {
                     Text(
                         text = name.first().uppercaseChar().toString(),
-                        style = MaterialTheme.typography.headlineSmall.copy(
+                        style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isSelected) PrimaryAccent else TextSecondary
+                            color = if (isSelected) GoogleBluePrimary else TextOnLightSecondary
                         )
                     )
                 }
             }
-            Spacer(modifier = Modifier.width(16.dp))
+            Spacer(modifier = Modifier.width(20.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(name, style = MaterialTheme.typography.titleMedium.copy(
+                Text(name, style = MaterialTheme.typography.titleLarge.copy(
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) TextPrimary else TextSecondary))
+                    color = if (isSelected) GoogleBluePrimary else TextOnLightPrimary))
                 Text(
                     text = buildString {
                         append(relation)
                         if (age > 0) append(" · Age $age")
                         if (gender.isNotBlank()) append(" · $gender")
                     },
-                    style = MaterialTheme.typography.bodySmall.copy(color = TextSecondary),
-                    fontSize = 12.sp
+                    style = MaterialTheme.typography.bodyMedium.copy(color = TextOnLightSecondary)
                 )
             }
             if (isSelected) {
                 Icon(Icons.Default.CheckCircle, contentDescription = "Selected",
-                    tint = PrimaryAccent, modifier = Modifier.size(24.dp))
+                    tint = GoogleBluePrimary, modifier = Modifier.size(32.dp))
             }
         }
     }
